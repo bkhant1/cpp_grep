@@ -7,132 +7,8 @@
 #include <t_values.hpp>
 #include <t_types.hpp>
 #include <t_toy.hpp>
-
-template <typename L, typename N>
-struct foreach_tuple_value_impl;
-
-template <typename L, int... N>
-struct foreach_tuple_value_impl<L, int_range<N...>>  
-{	
-	template <typename F>
-	static void apply(F f, L& l) 
-	{
-		bool _[] = { ((bool) f(
-			std::get<N>(l)	
-		))...} ;
-	}
-
-	template <bool c, typename El, typename F>
-	static typename std::enable_if<c, bool>::type f_if(El el, F f)
-	{
-		return f(el);
-	}
-
-	template <bool c, typename El, typename F>
-	static typename std::enable_if<!c, bool>::type f_if(El el, F f)
-	{
-		std::cout << "No possible to pass this type to f" << std::endl;
-		return false;
-	}
-
-	template <typename F>
-	static void try_apply(F f, const L& l)
-	{
-		bool _[] = 
-		{ ((bool) 
-			f_if<
-				true	
-			>(std::get<N>(l), f)
-		)...} ;
-	}
-};
-
-// "iterate" over the values of a tuples
-template <typename L>
-struct foreach_tuple_value
-{
-	foreach_tuple_value(L& l):
-		m_l(l) {}
-	
-	template <typename F>
-	void apply(F f) 
-	{
-		foreach_tuple_value_impl<
-			L,
-			typename make_range<
-				std::tuple_size<L>::value-1
-			>::type
-		>::apply(f, m_l);
-	}
-
-	template <typename F>
-	void try_apply(F f) 
-	{
-		foreach_tuple_value_impl<
-			L,
-			typename make_range<
-				std::tuple_size<L>::value-1
-			>::type
-		>::try_apply(f, m_l);
-	}
-
-	L& m_l;
-};
-
-template <typename List, int N>
-struct at {/* static assert false */};
-
-template <typename First, typename ...List, int N>
-struct at<type_list<First, List...>, N>
-{
-	using type = typename at<type_list<List...>, N-1>::type; 
-};
-
-template <typename Head, typename ...List>
-struct at<type_list<Head, List...>, 0>
-{
-	using type = Head;
-};
-
-template <class T> 
-struct get_callable_operator_type_if_exist  
-{ 
-	template <class Tp> 
-	static
-	decltype(&Tp::operator())
-	test(void*) 
-	{
-		return &Tp::begin;
-	}; 
- 
-	template <class Tp> 
-	/* Should be false_type instead of int */
-	static int test(...) {}; 
- 
-	using type = decltype(test<T>(0)); 
-};
-
-template <typename T>
-struct get_parameters_type_list 
-{
-	using type = typename get_parameters_type_list<
-		typename get_callable_operator_type_if_exist<T>::type
-	>::type;
-};
-
-template <typename T>
-struct get_parameters_type_list<T&>:
-	get_parameters_type_list<T> {};
-
-template <typename R, typename ...Args>
-struct get_parameters_type_list<R(*)(Args...)>
-{
-	using type = type_list<Args...>;
-};
-
-template <typename R, typename C, typename ...Args>
-struct get_parameters_type_list<R(C::*)(Args...)> 
-	: get_parameters_type_list<R(*)(Args...)> {};
+#include <t_codegen.hpp>
+#include <assert.hpp>
 
 template <class T> 
 struct get_begin_return_type_if_begin_exist  
@@ -187,26 +63,6 @@ template <typename If, typename Else>
 struct if_then_else<true, If, Else>
 {
 	using type = If;
-};
-
-template <bool cond, template<typename...> class If, template<typename...> class Else>
-struct hh_if_then_else 
-{
-	template <typename ...lArgs>
-	struct apply
-	{
-		using type = typename Else<lArgs...>::type;
-	};
-};
-
-template <template<typename...> class If, template<typename...> class Else>
-struct hh_if_then_else<true, If, Else>
-{
-	template <typename ...lArgs>
-	struct apply
-	{
-		using type = typename If<lArgs...>::type;
-	};
 };
 
 struct Iterability
@@ -264,12 +120,6 @@ template <bool condition>
 struct insert_in_list_if 
 {
 	template <typename L, typename E>
-	static void insert(L& ret, E& e)
-	{
-		ret.insert(ret.end(), &e);
-	}
-
-	template <typename L, typename E>
 	static void insert_if(L& ret, E& e, bool c)
 	{
 		if (c) ret.insert(ret.end(), &e);
@@ -280,16 +130,7 @@ template <>
 struct insert_in_list_if<false> 
 {
 	template <typename L, typename E>
-	static void insert(L, E) {};
-
-	template <typename L, typename E>
 	static void insert_if(L, E, bool) {};
-};
-
-template <bool Cond>
-struct enable_if
-{
-		
 };
 
 template<class T, class S, typename P>
@@ -301,7 +142,6 @@ struct grep_helper_base
 	bool predicate_on_s()
 	{
 		return apply_predicate_or_false<
-			// TODO is_same is too restrictive
 			is_substituable<
 				typename at<
 					typename get_parameters_type_list<P>::type,
@@ -516,15 +356,6 @@ struct equal_to{
 
 #include <chrono>
 
-
-#define ASSERT(COND) \
-	if (!COND) \
-		std::cout << "Test failed at line " \
-			<< __LINE__  \
-			<< " in "  \
-			<< __FILE__  << std::endl; 
-
-
 void has_begin_tests()
 {
 	ASSERT(has_begin<HasBegin>::result == 1);
@@ -552,16 +383,6 @@ int main(int argc, char* argv[])
 		get_return_type<decltype(&my_function)>::type>(); // i 
 	print_type<
 		get_return_type<decltype(&my_function_2)>::type>(); // PK8HasBegin
-
-	std::cout << "hh if then else test" << std::endl;
-	print_type<
-		hh_if_then_else<
-			false,
-			// int not a function ptr type, will not compile if called
-			get_return_type, 
-			identity
-		>::apply<int>::type	
-	>(); // i
 
 	std::cout << "Conditional get return type test" << std::endl;
 	print_type<
