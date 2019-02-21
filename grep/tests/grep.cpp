@@ -43,7 +43,7 @@ void g_helper_tests()
 	);
 }
 
-void g_test_no_options()
+void g_test_tuple_and_vectors()
 {
 	std::vector<std::vector<int>> vec_of_vec = 
 	{
@@ -111,39 +111,16 @@ void g_test_no_options()
 	ASSERT(grep_result_mix == expected_result_mix);
 }
 
+
+
 int main(int, char**)
 {
 	SAY("Helpers tests");
 	g_helper_tests();	
 
 	SAY("Grep test");
-	g_test_no_options();
-
-
-	using isVi_t = std::tuple<int, std::string, iVec>;
-
-	isVi_t in_complex_one 
-	{
-		5,
-		"Bonjour",
-		{4,3,2,1}
-	};
-
-	std::tuple
-	<
-		iVec,
-		char,
-		isVi_t
-	>
-	a_complex_one
-	{
-		{1,2,3,4,6},
-		'B',
-		in_complex_one
-	};
-
-	auto equal_to_char_B = equal_to<char>('B');
-
+	g_test_tuple_and_vectors();
+	g_test_user_defined_compiletime_iterator();
 
 	return 0;
 }

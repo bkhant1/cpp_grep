@@ -53,7 +53,8 @@ struct check_iterability
 		>::value;
 
 	static constexpr bool compiletime_iterable = 
-		is_tuple<T>::value;
+		is_tuple<T>::value ||
+		has_foreach<T>;
 
 	using type = typename if_then_else<
 		runtime_iterable,
@@ -132,8 +133,6 @@ struct grep_helper_base
 template<class T, class S, typename P, class S_iterability>
 struct grep_helper
 {
-	// Need to provide iterability
-	//std::static_assert<false>;
 };
 
 template <typename T, typename P>
