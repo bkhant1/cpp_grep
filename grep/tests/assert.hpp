@@ -18,7 +18,9 @@ struct argument_type<T(U)>
 			<< " in "  \
 			<< __FILE__  << std::endl; \
 	else \
-		std::cout << "OK" \
+		std::cout << "OK (line " \
+			<< __LINE__\
+			<< ")" \
 			<< std::endl;
 		
 #define IS_SAME(T1, T2) \

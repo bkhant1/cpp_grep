@@ -165,25 +165,74 @@ template <typename R, typename C, typename ...Args>
 struct get_parameters_type_list<R(C::*)(Args...)> 
 	: get_parameters_type_list<R(*)(Args...)> {};
 
-#define MEMBER_FUNCTION_TYPE(MEMBER_NAME, NAME_OF_META_FCT_TO_DEFINE) \
-template <class T> \
-struct NAME_OF_META_FCT_TO_DEFINE  \
-{ \
-	template <class Tp> \
-	static decltype(&Tp::begin) \
-	test(decltype(std::declval<Tp>().begin())*) {}; \
- \
-	template <class Tp> \
-	static false_ test(...) {}; \
- \
-	using type = decltype(test<T>(0)); \
-}
 
 #define _CONCAT(x,y) x ## y
 #define CONCAT(x,y) _CONCAT(x,y)
 
-#define HAS_MEMBER_FUNCTION(MEMBER_NAME, NAME_OF_META_FCT_TO_DEFINE) \
-MEMBER_FUNCTION_TYPE(MEMBER_NAME, CONCAT(CONCAT(NAME_OF_META_FCT_TO_DEFINE, __LINE__), __FILENAME__)); \
+#define MEMBER_FUNCTION_TYPE(MEMBER_NAME, NAME_OF_META_FCT_TO_DEFINE, ...) \
+template <class T> \
+struct NAME_OF_META_FCT_TO_DEFINE  \
+{ \
+\
+	template <typename S, typename ...Ts> \
+	using member_function_type = \
+		decltype(std::declval<S>().MEMBER_NAME( \
+				std::declval<Ts>()... \
+			) \
+		)(S::*)(Ts...); \
+ \
+	template <class Tp, typename ...Ts> \
+	static member_function_type< \
+		typename remove_ref<Tp>::type, \
+		##  __VA_ARGS__ \
+	> \
+	test( \
+		decltype(std::declval<Tp>().MEMBER_NAME( \
+				std::declval<Ts>()... \
+			) \
+		)* \
+	) {}; \
+ \
+	template <class Tp, typename ...Ts> \
+	static false_ test(...) {}; \
+ \
+	using type = decltype(test<T, ## __VA_ARGS__>(0)); \
+}
+
+#define MEMBER_FUNCTION_RETURN_TYPE(MEMBER_NAME, NAME_OF_META_FCT_TO_DEFINE, ...) \
+template <class T> \
+struct NAME_OF_META_FCT_TO_DEFINE \
+{ \
+	template <typename S, typename ...Ts> \
+	using member_function_type = \
+		decltype(std::declval<S>().MEMBER_NAME( \
+				std::declval<Ts>()... \
+			) \
+		)(S::*)(Ts...); \
+ \
+	template <class Tp, typename ...Ts> \
+	static typename get_return_type< \
+		member_function_type< \
+			typename remove_ref<Tp>::type, \
+			##  __VA_ARGS__ \
+		> \
+	>::type \
+	test( \
+		decltype(std::declval<Tp>().MEMBER_NAME( \
+				std::declval<Ts>()... \
+			) \
+		)* \
+	) {}; \
+ \
+	template <class Tp, typename ...Ts> \
+	static false_ test(...) {}; \
+ \
+	using type = decltype(test<T, ## __VA_ARGS__>(0)); \
+ \
+}
+
+#define HAS_MEMBER_FUNCTION(MEMBER_NAME, NAME_OF_META_FCT_TO_DEFINE, ...) \
+MEMBER_FUNCTION_TYPE(MEMBER_NAME, CONCAT(CONCAT(NAME_OF_META_FCT_TO_DEFINE, __LINE__), __FILENAME__), ## __VA_ARGS__); \
 template <typename T> \
 struct NAME_OF_META_FCT_TO_DEFINE \
 { \
@@ -193,7 +242,22 @@ struct NAME_OF_META_FCT_TO_DEFINE \
 			false_ \
 		>::value; \
 };
-	
+
+#define NESTED_TYPE(TYPE_NAME, NAME_OF_META_FCT_TO_DEFINE) \
+template <typename T> \
+struct NAME_OF_META_FCT_TO_DEFINE  \
+{ \
+\
+	template <class Tp> \
+	static typename T::TYPE_NAME \
+	test(typename T::TYPE_NAME*) {}; \
+ \
+	template <class Tp, typename ...Ts> \
+	static false_ test(...) {}; \
+ \
+	using type = decltype(test<T>(0)); \
+ \
+}
 
 // First argument is a type that can only exist if a class
 // Tp (Tp == T) .
@@ -209,7 +273,7 @@ struct NAME  \
  \
 	static int type_of(int){};\
 \
-	static const bool result =  \
+	static const bool value =  \
 		sizeof(test<T>(0)) == sizeof(char); \
 }
 

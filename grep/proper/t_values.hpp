@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 //
 // Booleans
 //
@@ -24,6 +26,19 @@ struct true_
 template <int ...N>
 struct int_range 
 {
+	static std::string str()
+	{
+		std::string all[] = 
+			{std::to_string(N)...};
+		std::string ret;
+		for (auto x: all)
+		{
+			ret += x + ",";
+		}
+		ret.resize(ret.size() - 1);
+		return ret;
+	}
+
 	static int _print_1(int n)
 	{ std::cout << n << ","; }
 
@@ -32,6 +47,8 @@ struct int_range
 		int _[] = {_print_1(N)... };
 		std::cout << std::endl;
 	}
+
+	
 };
 
 template <typename R1, typename R2>

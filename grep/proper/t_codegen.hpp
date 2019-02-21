@@ -1,5 +1,24 @@
 #pragma once
 
+#include <tuple>
+
+//
+// Conditions
+//
+
+template <bool cond, typename If, typename Else>
+struct if_then_else 
+{
+	using type = Else;
+};
+
+template <typename If, typename Else>
+struct if_then_else<true, If, Else>
+{
+	using type = If;
+};
+
+
 //
 // Iteration
 //

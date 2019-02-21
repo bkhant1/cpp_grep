@@ -1,6 +1,7 @@
 #include <assert.hpp>
 #include <t_toy.hpp>
 #include <t_types.hpp>
+#include <t_codegen.hpp>
 #include <iostream>
 #include <vector>
 
@@ -20,6 +21,19 @@ class HasBegin
 		int, char, std::vector<int>) {}	
 };
 
+class HasParentBegin: public HasBegin {};
+
+class HasSum_i_i
+{
+	public:
+	int sum(int, int) { return 0; }
+};
+
+class HasNestedType
+{
+	using nested_type = int;
+};
+
 int fct_return_int() { return 0; }
 
 const int& fct_return_const_int_ref(int& x) { return x; }
@@ -31,6 +45,24 @@ int fct_take_const_char_ref(const char&) {}
 struct fctor_take_i_return_c {
 	char operator()(int) { return 'x'; }
 };
+
+struct insert_as_string_in
+{
+	insert_as_string_in(std::vector<std::string>& l):
+		m_l(l) {}
+
+	template <typename X>
+	bool operator() (X x)
+	{
+		m_l.insert(m_l.end(), std::to_string(x));
+	}
+
+	std::vector<std::string>& m_l;
+};
+
+//
+// t_toy tests
+//
 
 void t_toy_tests()
 {
@@ -153,6 +185,8 @@ template<typename T>
 struct m { typename T::this_hopefully_does_not_exist z; };
 
 MEMBER_FUNCTION_TYPE(begin, begin_type);
+MEMBER_FUNCTION_TYPE(sum, sum_i_i_type, int, int);
+MEMBER_FUNCTION_TYPE(sum, sum_c_type, char);
 void test_member_function_type()
 {
 	IS_SAME(
@@ -161,21 +195,122 @@ void test_member_function_type()
 	);
 	
 	IS_SAME(
+		begin_type<std::vector<int>>::type,
+		decltype(
+			std::declval<std::vector<int>>().begin())
+			(std::vector<int>::*)()
+		)
+	
+	IS_SAME(
 		begin_type<int>::type,
 		false_
 	);
+
+	IS_SAME(
+		sum_i_i_type<HasSum_i_i>::type,
+		int(HasSum_i_i::*)(int, int)
+	);
+
+	IS_SAME(
+		sum_c_type<HasSum_i_i>::type,
+		false_
+	);
+
+	IS_SAME(
+		begin_type<HasBegin&>::type,
+		int*(HasBegin::*)(void)
+	);
+}
+
+MEMBER_FUNCTION_RETURN_TYPE(begin, begin_return_type);
+void test_member_function_return_type()
+{
+	IS_SAME(begin_return_type<HasBegin>::type, int*);
+	IS_SAME(begin_return_type<HasBegin&>::type, int*);
+	IS_SAME(begin_return_type<int>::type, false_);
 }
 
 HAS_MEMBER_FUNCTION(begin, has_begin);
+HAS_MEMBER_FUNCTION(end, has_end);
+HAS_MEMBER_FUNCTION(sum, has_sum_i_i, int, int);
+HAS_MEMBER_FUNCTION(sum, has_sum_c, char);
 void t_has_member_function_test()
 {
+	ASSERT(has_begin<std::vector<int>>::value);
+	ASSERT(
+		has_begin<
+			std::vector<
+				std::vector<int>
+			>
+		>::value);
+
 	ASSERT(has_begin<HasBegin>::value);
+
+	ASSERT(has_begin<HasParentBegin>::value);
+
 	ASSERT(!has_begin<int>::value);
+
+
+	ASSERT(has_end<std::vector<int>>::value);
+
+	ASSERT(has_sum_i_i<HasSum_i_i>::value);
+	ASSERT(!has_sum_c<HasSum_i_i>::value);
+
+}
+
+NESTED_TYPE(iterator_category, get_iterator_category);
+void t_has_nested_type()
+{
+	IS_SAME(
+		get_iterator_category<
+			std::iterator_traits<
+				std::vector<int>::iterator
+			>
+		>::type,
+		std::random_access_iterator_tag	
+	);
+}
+
+void t_integer_range_test()
+{
+	ASSERT(
+		(int_range<5,3,4,18>::str()
+		==
+		"5,3,4,18")
+	);
+
+	IS_SAME(
+		make_range<5>::type,
+		(int_range<0,1,2,3,4,5>)
+	);
+
+	IS_SAME(
+		(cat_range<
+			int_range<1,2>,
+			int_range<3,4>
+		>::type),
+		(int_range<1,2,3,4>)
+	);
+}
+
+void t_codegen_tests()
+{
+	std::tuple<int, char> tuple { 5, 'A' };
+
+	std::vector<std::string> l;
+
+	foreach_tuple_value<decltype(tuple)>(tuple).apply(
+		insert_as_string_in(l));
+
+	// std::to_string applies the same for int and char
+	std::vector<std::string> result {"5", "65" };
+
+	ASSERT(l == result);
 }
 
 int main(int, char**)
 {
-	SAY("Toy tests");
+	SAY("Toys tests");
 	t_toy_tests();
 	SAY("Types tests");
 	t_type_list_test();
@@ -183,5 +318,9 @@ int main(int, char**)
 	t_get_return_type_test();
 	t_get_parameter_type_list_test();
 	t_has_member_function_test();
+	SAY("Values tests");
+	t_integer_range_test();	
+	SAY("Codegen tests");
+	t_codegen_tests();
 }
 
