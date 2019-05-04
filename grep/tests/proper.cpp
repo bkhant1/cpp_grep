@@ -293,7 +293,7 @@ void t_integer_range_test()
 	);
 }
 
-void t_codegen_tests()
+void t_codegen_foreach_tuple_tests()
 {
 	std::tuple<int, char> tuple { 5, 'A' };
 
@@ -306,6 +306,11 @@ void t_codegen_tests()
 	std::vector<std::string> result {"5", "65" };
 
 	ASSERT(l == result);
+}
+
+void t_codegen_custom_foreach_test()
+{
+
 }
 
 int main(int, char**)

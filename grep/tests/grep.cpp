@@ -109,6 +109,11 @@ void g_test_tuple_and_vectors()
 		)[0])
 	};	
 	ASSERT(grep_result_mix == expected_result_mix);
+	ASSERT(
+		equal_to_char_B.m_nb_eval 
+		==
+		1 + std::string("Bonjour").size()
+	);
 }
 
 
@@ -120,7 +125,7 @@ int main(int, char**)
 
 	SAY("Grep test");
 	g_test_tuple_and_vectors();
-	g_test_user_defined_compiletime_iterator();
+//	g_test_user_defined_compiletime_iterator();
 
 	return 0;
 }

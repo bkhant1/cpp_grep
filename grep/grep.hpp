@@ -53,8 +53,8 @@ struct check_iterability
 		>::value;
 
 	static constexpr bool compiletime_iterable = 
-		is_tuple<T>::value ||
-		has_foreach<T>;
+		is_tuple<T>::value;// ||
+		//has_foreach<T>;
 
 	using type = typename if_then_else<
 		runtime_iterable,
